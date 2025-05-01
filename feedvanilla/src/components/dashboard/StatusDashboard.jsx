@@ -14,17 +14,20 @@ const ProductionDashboard = () => {
     direction: "ascending",
   });
 
-  // Status colors - using lighter modern palette
+  // Updated UBS colors
   const statusColors = {
-    GREEN: "#7cb342",
-    AMBER: "#ffb74d",
-    RED: "#ef5350",
+    GREEN: "#4CAF50", // UBS Green
+    AMBER: "#f5a623", // UBS Orange
+    RED: "#e60000", // UBS Red
   };
 
+  // Updated UBS colors for severity
   const severityColors = {
-    "1-2": "#ef5350",
-    3: "#ffb74d",
-    "4-5": "#7cb342",
+    1: "#e60000", // UBS Red for Severity 1
+    2: "#ff5722", // UBS Orange-Red for Severity 2
+    3: "#f5a623", // UBS Orange for Severity 3
+    4: "#4CAF50", // UBS Green for Severity 4
+    5: "#81C784", // UBS Light Green for Severity 5
   };
 
   // Dashboard data
@@ -61,12 +64,12 @@ const ProductionDashboard = () => {
       { name: "WM USA", status: "GREEN" },
     ],
     incidentCounts: {
-      "Asset Management": { "1-2": 0, 3: 0, 4: 0, 5: 2 },
-      "Investment Bank": { "1-2": 0, 3: 0, 4: 1, 5: 28 },
-      "Group Functions": { "1-2": 0, 3: 0, 4: 1, 5: 43 },
-      "WM USA": { "1-2": 0, 3: 0, 4: 0, 5: 3 },
-      WMPC: { "1-2": 0, 3: 0, 4: 1, 5: 5 },
-      "Technology Services": { "1-2": 0, 3: 2, 4: 3, 5: 45 },
+      "Asset Management": { 1: 0, 2: 0, 3: 0, 4: 0, 5: 2 },
+      "Investment Bank": { 1: 0, 2: 0, 3: 0, 4: 1, 5: 28 },
+      "Group Functions": { 1: 0, 2: 0, 3: 0, 4: 1, 5: 43 },
+      "WM USA": { 1: 0, 2: 0, 3: 0, 4: 0, 5: 3 },
+      WMPC: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 5 },
+      "Technology Services": { 1: 0, 2: 0, 3: 2, 4: 3, 5: 45 },
     },
     incidents: [
       {
@@ -207,6 +210,7 @@ const ProductionDashboard = () => {
     setSortConfig({ key, direction });
   };
 
+  // StatusBadge Component with UBS colors
   const StatusBadge = ({ status }) => {
     const backgroundColor = statusColors[status] || "#9e9e9e"; // Default color if status is invalid
     return (
@@ -219,14 +223,17 @@ const ProductionDashboard = () => {
     );
   };
 
+  // Updated SeverityBadge Component
   const SeverityBadge = ({ severity }) => {
-    const sevKey = severity <= 2 ? "1-2" : severity === 3 ? "3" : "4-5";
+    const backgroundColor = severityColors[severity];
+    const textColor = "#ffffff"; // White text for all UBS colors
+
     return (
       <span
-        className="px-3 py-1 rounded-full text-sm font-medium text-white"
-        style={{ backgroundColor: severityColors[sevKey] }}
+        className="px-3 py-1 rounded-full text-sm font-medium inline-block transition-transform duration-300 hover:translate-x-1 hover:translate-y-1"
+        style={{ backgroundColor, color: textColor }}
       >
-        {severity}
+        Severity {severity}
       </span>
     );
   };
@@ -234,7 +241,10 @@ const ProductionDashboard = () => {
   return (
     <div className="w-full min-h-screen bg-gray-50 p-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm">
+      <div
+        className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm"
+        style={{}}
+      >
         <div className="mb-4 md:mb-0">
           <h1 className="text-2xl font-bold text-gray-800">
             Technology Production Stability View
@@ -258,13 +268,13 @@ const ProductionDashboard = () => {
       {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {/* Regions Column */}
-        <div className="md:col-end-1 flex flex-col justify-between">
+        <div className="md:col-end-1 flex flex-col justify-evenly">
           {dashboardData.regions.map((region, idx) => (
             <div
               key={idx}
-              className="bg-white p-4 rounded-lg shadow-sm text-center mb-4 md:mb-0"
+              className="bg-white p-4 rounded-lg shadow-sm text-center md:mb-0"
               style={{
-                height: "calc(33.33% - 1rem)", // Ensures equal height for each region card
+                height: "calc(26% - 1rem)", // Ensures equal height for each region card
                 maxWidth: "90%", // Reduces the width of the region column
                 margin: "0 auto", // Centers the region cards horizontally
               }}
@@ -278,9 +288,14 @@ const ProductionDashboard = () => {
         {/* Technology Infrastructure Tables */}
         <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Core Technology Infra */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-100 p-3 border-g">
-              <h2 className="font-semibold text-gray-700">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div
+              className="p-3"
+              style={{
+                borderBottom: "3px solid #e60000", // UBS red underline
+              }}
+            >
+              <h2 className="font-semibold text-[#111111]">
                 Core Technology Infra
               </h2>
             </div>
@@ -298,9 +313,14 @@ const ProductionDashboard = () => {
           </div>
 
           {/* Front End Technology Infra */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-100 p-3 border-g">
-              <h2 className="font-semibold text-gray-700">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div
+              className="p-3"
+              style={{
+                borderBottom: "3px solid #e60000", // UBS red underline
+              }}
+            >
+              <h2 className="font-semibold text-[#111111]">
                 Front End Technology Infra
               </h2>
             </div>
@@ -318,9 +338,14 @@ const ProductionDashboard = () => {
           </div>
 
           {/* Business Application Portfolio */}
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-100 p-3 border-g">
-              <h2 className="font-semibold text-gray-700">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            <div
+              className="p-3"
+              style={{
+                borderBottom: "3px solid #e60000", // UBS red underline
+              }}
+            >
+              <h2 className="font-semibold text-[#111111]">
                 Business Application Portfolio
               </h2>
             </div>
@@ -339,9 +364,14 @@ const ProductionDashboard = () => {
         </div>
       </div>
 
-      {/* Incident Summary by Division */}
+      {/* Updated Incident Summary by Division */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-        <div className="bg-gray-100 p-3 border-g">
+        <div
+          className="p-3 border-g"
+          style={{
+            borderBottom: "3px solid #e60000", // UBS red underline
+          }}
+        >
           <h2 className="font-semibold text-gray-700">
             Incident Summary by Division
           </h2>
@@ -378,9 +408,13 @@ const ProductionDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {["1-2", "3", "4", "5"].map((sev, idx) => (
+              {[1, 2, 3, 4, 5].map((sev, idx) => (
                 <tr key={idx} className="border-g">
-                  <td className="px-4 py-2 font-medium">{sev}</td>
+                  <td
+                    className="px-4 py-2 font-medium text-gray-500" // Gray text for severity labels
+                  >
+                    Severity {sev}
+                  </td>
                   {Object.keys(dashboardData.incidentCounts).map(
                     (division, idxDiv) => {
                       const count = dashboardData.incidentCounts[division][sev];
@@ -392,21 +426,8 @@ const ProductionDashboard = () => {
                             }`}
                             style={{
                               backgroundColor:
-                                count > 0
-                                  ? sev === "1-2"
-                                    ? "#ffebee"
-                                    : sev === "3"
-                                    ? "#fff8e1"
-                                    : "#f1f8e9"
-                                  : "#f5f5f5",
-                              color:
-                                count > 0
-                                  ? sev === "1-2"
-                                    ? "#d32f2f"
-                                    : sev === "3"
-                                    ? "#ff8f00"
-                                    : "#558b2f"
-                                  : "#9e9e9e",
+                                count > 0 ? severityColors[sev] : "#f5f5f5",
+                              color: count > 0 ? "#ffffff" : "#9e9e9e",
                             }}
                           >
                             {count}
@@ -422,9 +443,14 @@ const ProductionDashboard = () => {
         </div>
       </div>
 
-      {/* Change Statistics Section */}
+      {/* Updated Change Statistics Section */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-        <div className="bg-gray-100 p-3 border-g">
+        <div
+          className="p-3 border-g"
+          style={{
+            borderBottom: "3px solid #e60000", // UBS red underline
+          }}
+        >
           <h2 className="font-semibold text-gray-700">
             Change Statistics by Division
           </h2>
@@ -453,7 +479,10 @@ const ProductionDashboard = () => {
                 { label: "Next 7 Days", key: "next7Days" },
               ].map((timePeriod, idx) => (
                 <tr key={idx} className="border-g">
-                  <td className="px-4 py-2 font-medium">{timePeriod.label}</td>
+                  <td className="px-4 py-2 font-medium text-gray-500">
+                    {/* Gray text for time period */}
+                    {timePeriod.label}
+                  </td>
                   {Object.keys(changeStatistics).map((division, idxDiv) => {
                     const changeStats =
                       changeStatistics[division][timePeriod.key];
@@ -465,8 +494,8 @@ const ProductionDashboard = () => {
                           }`}
                           style={{
                             backgroundColor:
-                              changeStats > 0 ? "#e3f2fd" : "#f5f5f5",
-                            color: changeStats > 0 ? "#1e88e5" : "#9e9e9e",
+                              changeStats > 0 ? "#d0e7ff" : "#f5f5f5", // Muted blue for cells with data
+                            color: changeStats > 0 ? "#0056b3" : "#9e9e9e", // Dark blue for text
                           }}
                         >
                           {changeStats}
@@ -483,14 +512,19 @@ const ProductionDashboard = () => {
 
       {/* Current Incidents */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
-        <div className="bg-gray-100 p-3 border-g flex justify-between items-center">
+        <div
+          className="p-3 border-g flex justify-between items-center"
+          style={{
+            borderBottom: "3px solid #e60000", // UBS red underline
+          }}
+        >
           <h2 className="font-semibold text-gray-700">
             Current Incidents {selectedDivision ? `- ${selectedDivision}` : ""}
           </h2>
           {selectedDivision && (
             <button
               onClick={() => setSelectedDivision(null)}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:scale-105 transition-transform duration-200 disabled:opacity-50 ml-2 mb-2"
             >
               Clear Filter
             </button>
@@ -513,7 +547,7 @@ const ProductionDashboard = () => {
           {/* Severity Filter */}
           <div className="relative">
             <select
-              className="w-full bg-white rounded-lg pl-3 pr-7 py-2 shadow appearance-none cursor-pointer text-sm text-gray-700"
+              className="w-full bg-white rounded-lg pl-3 pr-7 py-2 shadow appearance-none cursor-pointer text-sm text-gray-700 hover:scale-105 transition-transform duration-200"
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
             >
@@ -655,15 +689,23 @@ const ProductionDashboard = () => {
             </thead>
             <tbody>
               {paginatedIncidents.map((incident, idx) => (
-                <tr key={idx} className="border-g hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-700">
+                <tr
+                  key={idx}
+                  className="border-g hover:bg-gray-100 hover:scale-[1.02] transition-transform duration-200"
+                  style={{
+                    backgroundColor: "#f5f5f5", // Light gray background for rows
+                    borderRadius: "12px", // Rounded corners for rows
+                    marginBottom: "8px", // Padding between rows
+                  }}
+                >
+                  <td className="px-4 py-3 font-medium text-[#333333]">
                     {incident.division}
                   </td>
                   <td className="px-4 py-3">
                     <SeverityBadge severity={incident.severity} />
                   </td>
-                  <td className="px-4 py-3 text-blue-600">{incident.id}</td>
-                  <td className="px-4 py-3 text-gray-700 max-w-md truncate">
+                  <td className="px-4 py-3 text-[#e60000]">{incident.id}</td>
+                  <td className="px-4 py-3 text-[#333333] max-w-md truncate">
                     {incident.title}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
@@ -687,7 +729,7 @@ const ProductionDashboard = () => {
 
         <div className="flex justify-between items-center mt-4">
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 ml-2 mb-2"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:scale-105 transition-transform duration-200 disabled:opacity-50 ml-2 mb-2"
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
           >
@@ -697,7 +739,7 @@ const ProductionDashboard = () => {
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg disabled:opacity-50 mr-2 mb-2"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 hover:scale-105 transition-transform duration-200 disabled:opacity-50 mr-2 mb-2"
             onClick={() =>
               setCurrentPage((prev) => Math.min(prev + 1, totalPages))
             }
