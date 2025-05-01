@@ -24,17 +24,29 @@ const Sidebar = ({ sidebarOptions }) => {
           {sidebarOptions.map((option, index) => (
             <li key={index}>
               <div
-                className="flex justify-between items-center cursor-pointer text-gray-700 hover:text-gray-900"
+                className={`flex justify-between items-center cursor-pointer ${
+                  option.subOptions.length > 0
+                    ? "text-gray-700 hover:text-gray-900"
+                    : "text-gray-600 hover:text-gray-800"
+                }`}
                 onClick={() => toggleMenu(index)}
               >
-                <span>{option.title}</span>
-                {openMenu === index ? (
-                  <ChevronUp size={16} />
+                {option.subOptions.length > 0 ? (
+                  <>
+                    <span>{option.title}</span>
+                    {openMenu === index ? (
+                      <ChevronUp size={16} />
+                    ) : (
+                      <ChevronDown size={16} />
+                    )}
+                  </>
                 ) : (
-                  <ChevronDown size={16} />
+                  <Link to="/" className="block no-underline">
+                    {option.title}
+                  </Link>
                 )}
               </div>
-              {openMenu === index && (
+              {openMenu === index && option.subOptions.length > 0 && (
                 <ul className="mt-2 pl-4 space-y-4">
                   {option.subOptions.map((subOption, subIndex) => (
                     <li key={subIndex}>

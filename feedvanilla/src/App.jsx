@@ -8,6 +8,10 @@ export default function App() {
   // Static dictionary for service divisions and their streams
   const sidebarOptions = [
     {
+      title: "Home",
+      subOptions: [], // No sub-options for Home
+    },
+    {
       title: "Asset Management",
       subOptions: [{ stream: "AM Tech VC" }, { stream: "AM Tech TF" }],
     },
