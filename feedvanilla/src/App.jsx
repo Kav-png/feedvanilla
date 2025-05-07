@@ -33,7 +33,7 @@ export default function App() {
           <Sidebar sidebarOptions={sidebarOptions} />
 
           {/* Main Content */}
-          <main className="flex-1 bg-gray-50 p-4">
+          <main className="flex-1 bg-gray-50 p-4 main-container">
             <Routes>
               <Route path="/" element={<StatusDashboard />} />
               {sidebarOptions.map((option) =>

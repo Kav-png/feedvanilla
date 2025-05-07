@@ -14,6 +14,16 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+.main-container {
+  max-width: 1200px; /* Maximum width of the page */
+  min-width: 800px; /* Minimum width of the page */
+  margin: 0 auto; /* Center the content horizontally */
+  background-color: #ffffff; /* Ensure the container has a white background */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+  padding: 20px; /* Add some padding for spacing */
+  border-radius: 8px; /* Optional: Add rounded corners */
+}
+
 a {
   font-weight: 500;
   text-decoration: inherit;
@@ -27,8 +37,11 @@ body {
   margin: 0;
   display: flex;
   place-items: center;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
   min-width: 320px;
   min-height: 100vh;
+  background-color: whitesmoke; /* White background for the rest of the page */
 }
 
 h1 {
