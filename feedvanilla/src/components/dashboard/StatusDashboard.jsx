@@ -137,6 +137,33 @@ const ProductionDashboard = () => {
     "Technology Services": { last24Hours: 12, last7Days: 40, next7Days: 25 },
   };
 
+  // Mock ML insights data
+  const mlInsights = {
+    "Asset Management": { risk: 0.2 }, // 20% risk
+    "Investment Bank": { risk: 0.5 }, // 50% risk
+    "Group Functions": { risk: 0.8 }, // 80% risk
+    "WM USA": { risk: 0.1 }, // 10% risk
+    WMPC: { risk: 0.3 }, // 30% risk
+    "Technology Services": { risk: 0.7 }, // 70% risk
+  };
+
+  // RiskBadge Component
+  const RiskBadge = ({ risk }) => {
+    let backgroundColor;
+    if (risk < 0.3) backgroundColor = "#4CAF50"; // Green for low risk
+    else if (risk < 0.6) backgroundColor = "#f5a623"; // Orange for medium risk
+    else backgroundColor = "#e60000"; // Red for high risk
+
+    return (
+      <span
+        className="px-3 py-1 rounded-full text-sm font-medium text-white"
+        style={{ backgroundColor }}
+      >
+        {risk < 0.3 ? "Low Risk" : risk < 0.6 ? "Medium Risk" : "High Risk"}
+      </span>
+    );
+  };
+
   // Move getFilteredIncidents above its usage
   const getFilteredIncidents = () => {
     let filtered = dashboardData.incidents;
@@ -507,6 +534,47 @@ const ProductionDashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ML Insights Section */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+        <div
+          className="p-3 border-g"
+          style={{
+            borderBottom: "3px solid #e60000", // UBS red underline
+          }}
+        >
+          <h2 className="font-semibold text-gray-700">
+            Predicted Incident Risk (Next Hour)
+          </h2>
+        </div>
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Object.keys(mlInsights).map((division, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col items-center bg-gray-50 p-4 rounded-lg shadow"
+            >
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                {division}
+              </h3>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                <div
+                  className="h-4 rounded-full"
+                  style={{
+                    width: `${mlInsights[division].risk * 100}%`,
+                    backgroundColor:
+                      mlInsights[division].risk < 0.3
+                        ? "#4CAF50"
+                        : mlInsights[division].risk < 0.6
+                        ? "#f5a623"
+                        : "#e60000",
+                  }}
+                ></div>
+              </div>
+              <RiskBadge risk={mlInsights[division].risk} />
+            </div>
+          ))}
         </div>
       </div>
 
