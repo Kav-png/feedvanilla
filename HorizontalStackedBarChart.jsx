@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const HorizontalStackedBarChart = () => {
   // Sample data - you can replace this with your actual data
@@ -41,6 +41,8 @@ const HorizontalStackedBarChart = () => {
   ];
 
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+  const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
+  const containerRef = useRef(null);
 
   const colors = {
     open: '#6b7280',        // gray
@@ -48,6 +50,33 @@ const HorizontalStackedBarChart = () => {
     completed: '#10b981',   // emerald
     exception: '#ef4444'    // red
   };
+
+  // Update dimensions when container size changes
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        setDimensions({ width: Math.max(300, width), height: Math.max(200, height) });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    
+    // Use ResizeObserver if available for more accurate container tracking
+    let resizeObserver;
+    if (window.ResizeObserver && containerRef.current) {
+      resizeObserver = new ResizeObserver(updateDimensions);
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, []);
 
   const handleMouseEnter = (e, category, segment, value, total) => {
     const rect = e.target.getBoundingClientRect();
@@ -64,26 +93,45 @@ const HorizontalStackedBarChart = () => {
     setTooltip({ visible: false, x: 0, y: 0, content: '' });
   };
 
-  const barHeight = 40;
-  const chartWidth = 600;
-  const chartHeight = data.length * (barHeight + 20) + 40;
+  // Dynamic sizing calculations
   const minWidthForLabel = 0.08; // Minimum 8% width to show label
+  const headerHeight = 80;
+  const legendHeight = 60;
+  const availableHeight = dimensions.height - headerHeight - legendHeight;
+  const barHeight = Math.max(20, Math.min(40, availableHeight / (data.length * 1.5)));
+  const barSpacing = Math.max(10, barHeight * 0.5);
+  
+  // Calculate if we should show y-axis labels based on available space
+  const labelWidth = 180;
+  const minWidthForLabels = 500; // Minimum container width to show labels
+  const showLabels = dimensions.width >= minWidthForLabels;
+  
+  const chartMarginLeft = showLabels ? labelWidth : 40;
+  const chartMarginRight = 40;
+  const chartWidth = Math.max(200, dimensions.width - chartMarginLeft - chartMarginRight);
+  const chartHeight = data.length * (barHeight + barSpacing);
 
   return (
-    <div className="p-6 bg-white">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Project Progress Overview</h2>
+    <div ref={containerRef} className="w-full h-full p-4 bg-white overflow-hidden">
+      <h2 className="text-xl font-bold mb-4 text-gray-800 text-center">Project Progress Overview</h2>
       
-      {/* Chart */}
-      <div className="relative">
-        <svg width={chartWidth + 200} height={chartHeight} className="overflow-visible">
-          {/* Y-axis labels */}
-          {data.map((item, index) => {
+      {/* Chart Container */}
+      <div className="relative flex-1" style={{ height: `calc(100% - ${headerHeight + legendHeight}px)` }}>
+        <svg 
+          width={dimensions.width - 32} 
+          height={Math.max(chartHeight + 40, availableHeight)} 
+          className="overflow-visible"
+          viewBox={`0 0 ${dimensions.width - 32} ${Math.max(chartHeight + 40, availableHeight)}`}
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* Y-axis labels - only show if container is wide enough */}
+          {showLabels && data.map((item, index) => {
             const total = item.open + item.started + item.completed + item.exception;
             return (
               <text
                 key={`label-${index}`}
-                x="180"
-                y={index * (barHeight + 20) + 20 + barHeight / 2}
+                x={chartMarginLeft - 10}
+                y={index * (barHeight + barSpacing) + 20 + barHeight / 2}
                 textAnchor="end"
                 className="text-sm fill-gray-700"
                 dominantBaseline="middle"
@@ -95,41 +143,44 @@ const HorizontalStackedBarChart = () => {
 
           {/* X-axis */}
           <line
-            x1="200"
-            y1={chartHeight - 20}
-            x2={chartWidth + 200}
-            y2={chartHeight - 20}
+            x1={chartMarginLeft}
+            y1={chartHeight + 20}
+            x2={chartMarginLeft + chartWidth}
+            y2={chartHeight + 20}
             stroke="#e5e7eb"
             strokeWidth="1"
           />
 
-          {/* X-axis labels */}
-          {[0, 20, 40, 60, 80, 100].map((tick) => (
-            <g key={`tick-${tick}`}>
-              <line
-                x1={200 + (tick / 100) * chartWidth}
-                y1={chartHeight - 20}
-                x2={200 + (tick / 100) * chartWidth}
-                y2={chartHeight - 15}
-                stroke="#e5e7eb"
-                strokeWidth="1"
-              />
-              <text
-                x={200 + (tick / 100) * chartWidth}
-                y={chartHeight - 5}
-                textAnchor="middle"
-                className="text-xs fill-gray-600"
-              >
-                {tick}%
-              </text>
-            </g>
-          ))}
+          {/* X-axis labels - dynamic based on width */}
+          {[0, 25, 50, 75, 100].map((tick) => {
+            if (chartWidth < 300 && tick !== 0 && tick !== 50 && tick !== 100) return null;
+            return (
+              <g key={`tick-${tick}`}>
+                <line
+                  x1={chartMarginLeft + (tick / 100) * chartWidth}
+                  y1={chartHeight + 20}
+                  x2={chartMarginLeft + (tick / 100) * chartWidth}
+                  y2={chartHeight + 25}
+                  stroke="#e5e7eb"
+                  strokeWidth="1"
+                />
+                <text
+                  x={chartMarginLeft + (tick / 100) * chartWidth}
+                  y={chartHeight + 35}
+                  textAnchor="middle"
+                  className="text-xs fill-gray-600"
+                >
+                  {tick}%
+                </text>
+              </g>
+            );
+          })}
 
           {/* Bars */}
           {data.map((item, index) => {
-            const y = index * (barHeight + 20) + 20;
+            const y = index * (barHeight + barSpacing) + 20;
             const total = item.open + item.started + item.completed + item.exception;
-            let xOffset = 200;
+            let xOffset = chartMarginLeft;
 
             const openWidth = (item.open / total) * chartWidth;
             const startedWidth = (item.started / total) * chartWidth;
@@ -150,14 +201,14 @@ const HorizontalStackedBarChart = () => {
                   onMouseLeave={handleMouseLeave}
                 />
                 
-                {/* Open label */}
-                {(item.open / total) >= minWidthForLabel && (
+                {/* Open label - only show if segment is wide enough and bar is tall enough */}
+                {(item.open / total) >= minWidthForLabel && barHeight >= 20 && (
                   <text
                     x={xOffset + openWidth / 2}
                     y={y + barHeight / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-sm font-medium fill-white pointer-events-none"
+                    className={`font-medium fill-white pointer-events-none ${barHeight < 30 ? 'text-xs' : 'text-sm'}`}
                   >
                     {item.open}
                   </text>
@@ -176,13 +227,13 @@ const HorizontalStackedBarChart = () => {
                 />
                 
                 {/* Started label */}
-                {(item.started / total) >= minWidthForLabel && (
+                {(item.started / total) >= minWidthForLabel && barHeight >= 20 && (
                   <text
                     x={xOffset + openWidth + startedWidth / 2}
                     y={y + barHeight / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-sm font-medium fill-white pointer-events-none"
+                    className={`font-medium fill-white pointer-events-none ${barHeight < 30 ? 'text-xs' : 'text-sm'}`}
                   >
                     {item.started}
                   </text>
@@ -201,13 +252,13 @@ const HorizontalStackedBarChart = () => {
                 />
                 
                 {/* Completed label */}
-                {(item.completed / total) >= minWidthForLabel && (
+                {(item.completed / total) >= minWidthForLabel && barHeight >= 20 && (
                   <text
                     x={xOffset + openWidth + startedWidth + completedWidth / 2}
                     y={y + barHeight / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-sm font-medium fill-white pointer-events-none"
+                    className={`font-medium fill-white pointer-events-none ${barHeight < 30 ? 'text-xs' : 'text-sm'}`}
                   >
                     {item.completed}
                   </text>
@@ -226,13 +277,13 @@ const HorizontalStackedBarChart = () => {
                 />
                 
                 {/* Exception label */}
-                {(item.exception / total) >= minWidthForLabel && (
+                {(item.exception / total) >= minWidthForLabel && barHeight >= 20 && (
                   <text
                     x={xOffset + openWidth + startedWidth + completedWidth + exceptionWidth / 2}
                     y={y + barHeight / 2}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-sm font-medium fill-white pointer-events-none"
+                    className={`font-medium fill-white pointer-events-none ${barHeight < 30 ? 'text-xs' : 'text-sm'}`}
                   >
                     {item.exception}
                   </text>
@@ -245,7 +296,7 @@ const HorizontalStackedBarChart = () => {
         {/* Tooltip */}
         {tooltip.visible && (
           <div
-            className="absolute bg-gray-800 text-white px-2 py-1 rounded text-sm pointer-events-none z-10"
+            className="absolute bg-gray-800 text-white px-2 py-1 rounded text-sm pointer-events-none z-10 whitespace-nowrap"
             style={{
               left: tooltip.x,
               top: tooltip.y,
@@ -257,25 +308,41 @@ const HorizontalStackedBarChart = () => {
         )}
       </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-6">
+      {/* Legend - responsive layout */}
+      <div className={`flex justify-center mt-4 ${dimensions.width < 400 ? 'flex-wrap gap-2' : 'gap-6'}`}>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colors.open }}></div>
-          <span className="text-sm text-gray-700">Open</span>
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.open }}></div>
+          <span className="text-xs text-gray-700">Open</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colors.started }}></div>
-          <span className="text-sm text-gray-700">Started</span>
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.started }}></div>
+          <span className="text-xs text-gray-700">Started</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colors.completed }}></div>
-          <span className="text-sm text-gray-700">Completed</span>
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.completed }}></div>
+          <span className="text-xs text-gray-700">Completed</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: colors.exception }}></div>
-          <span className="text-sm text-gray-700">Exception</span>
+          <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.exception }}></div>
+          <span className="text-xs text-gray-700">Exception</span>
         </div>
       </div>
+
+      {/* Show category info when labels are hidden */}
+      {!showLabels && (
+        <div className="mt-4 text-xs text-gray-600 text-center">
+          <div className="grid grid-cols-1 gap-1">
+            {data.map((item, index) => {
+              const total = item.open + item.started + item.completed + item.exception;
+              return (
+                <div key={`mobile-label-${index}`}>
+                  {item.category} ({total})
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
