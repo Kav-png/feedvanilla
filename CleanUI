@@ -1,0 +1,467 @@
+import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { ChevronDown, ChevronUp, Calendar, Clock, CheckCircle, AlertTriangle, Users, Activity } from 'lucide-react';
+
+const Dashboard = () => {
+  const [expandedPhases, setExpandedPhases] = useState({});
+
+  const togglePhase = (phaseId) => {
+    setExpandedPhases(prev => ({
+      ...prev,
+      [phaseId]: !prev[phaseId]
+    }));
+  };
+
+  // Event status colors
+  const statusColors = {
+    open: '#3b82f6',      // Blue
+    started: '#f59e0b',   // Amber/Orange  
+    completed: '#10b981', // Green
+    exception: '#ef4444'  // Red
+  };
+
+  // Sample data for charts
+  const barData = [
+    { category: 'Product A', sales: 4000 },
+    { category: 'Product B', sales: 3000 },
+    { category: 'Product C', sales: 2000 },
+    { category: 'Product D', sales: 2780 },
+    { category: 'Product E', sales: 1890 },
+  ];
+
+  const pieData = [
+    { name: 'Open', value: 25, color: statusColors.open },
+    { name: 'Started', value: 45, color: statusColors.started },
+    { name: 'Completed', value: 25, color: statusColors.completed },
+    { name: 'Exception', value: 5, color: statusColors.exception },
+  ];
+
+  // Event details for the left section
+  const eventDetails = {
+    eventName: 'Annual Product Launch 2024',
+    eventId: 'EVT-2024-001',
+    startDate: '2024-02-15',
+    endDate: '2024-02-17',
+    location: 'Convention Center, San Francisco',
+    organizer: 'Marketing Team',
+    participants: 1250,
+    budget: '$125,000'
+  };
+
+  // Event phases data
+  const eventPhases = [
+    {
+      id: 'planning',
+      name: 'Planning Phase',
+      description: 'Initial event planning and preparation',
+      icon: Calendar,
+      color: 'blue',
+      events: [
+        { id: 1, eventName: 'Venue Booking Confirmation', organizer: 'John Doe', startDate: '2024-02-15', endDate: '2024-02-17', status: 'completed', participants: 5, budget: '$15,000' },
+        { id: 2, eventName: 'Catering Setup Meeting', organizer: 'Jane Smith', startDate: '2024-02-20', endDate: '2024-02-20', status: 'open', participants: 8, budget: '$2,500' },
+        { id: 3, eventName: 'Speaker Coordination Call', organizer: 'Mike Johnson', startDate: '2024-02-18', endDate: '2024-02-18', status: 'started', participants: 12, budget: '$5,000' },
+      ]
+    },
+    {
+      id: 'execution',
+      name: 'Execution Phase',
+      description: 'Active event implementation and delivery',
+      icon: Activity,
+      color: 'amber',
+      events: [
+        { id: 4, eventName: 'Main Conference Day 1', organizer: 'Sarah Wilson', startDate: '2024-02-15', endDate: '2024-02-15', status: 'started', participants: 250, budget: '$35,000' },
+        { id: 5, eventName: 'Workshop Sessions', organizer: 'Tom Brown', startDate: '2024-02-16', endDate: '2024-02-16', status: 'open', participants: 150, budget: '$18,000' },
+        { id: 6, eventName: 'Networking Reception', organizer: 'Lisa Chen', startDate: '2024-02-16', endDate: '2024-02-16', status: 'exception', participants: 200, budget: '$12,000' },
+      ]
+    },
+    {
+      id: 'followup',
+      name: 'Follow-up Phase',
+      description: 'Post-event analysis and follow-up activities',
+      icon: CheckCircle,
+      color: 'green',
+      events: [
+        { id: 7, eventName: 'Feedback Collection', organizer: 'David Kim', startDate: '2024-02-18', endDate: '2024-02-25', status: 'started', participants: 300, budget: '$3,000' },
+        { id: 8, eventName: 'Final Report Generation', organizer: 'Anna Rodriguez', startDate: '2024-02-26', endDate: '2024-02-28', status: 'open', participants: 6, budget: '$1,500' },
+        { id: 9, eventName: 'ROI Analysis Meeting', organizer: 'Robert Taylor', startDate: '2024-03-01', endDate: '2024-03-01', status: 'open', participants: 15, budget: '$2,000' },
+      ]
+    }
+  ];
+
+  const getStatusBadge = (status) => {
+    const configs = {
+      open: { bg: 'bg-blue-100', text: 'text-blue-800', icon: Calendar },
+      started: { bg: 'bg-amber-100', text: 'text-amber-800', icon: Clock },
+      completed: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+      exception: { bg: 'bg-red-100', text: 'text-red-800', icon: AlertTriangle }
+    };
+    
+    const config = configs[status];
+    const IconComponent = config.icon;
+    
+    return (
+      <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${config.bg} ${config.text}`}>
+        <IconComponent className="w-3 h-3 mr-1" />
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
+  // Calculate status counts for stats from all phases
+  const allEvents = eventPhases.flatMap(phase => phase.events);
+  const statusCounts = allEvents.reduce((acc, event) => {
+    acc[event.status] = (acc[event.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const getPhaseColorClasses = (color) => {
+    const colorMap = {
+      blue: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', icon: 'bg-blue-100 text-blue-600' },
+      amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', icon: 'bg-amber-100 text-amber-600' },
+      green: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-800', icon: 'bg-green-100 text-green-600' },
+    };
+    return colorMap[color];
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Subtle decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-red-50 to-transparent rounded-full transform translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-red-50 to-transparent rounded-full transform -translate-x-1/2 translate-y-1/2"></div>
+      </div>
+
+      {/* Header */}
+      <header className="relative bg-white shadow-lg border-b-2 border-red-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-3"></div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Event Management <span className="text-red-600">Dashboard</span>
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <span>Last updated: Jan 15, 2024</span>
+              </div>
+              <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center shadow-lg">
+                <span className="text-white text-sm font-medium">JD</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-blue-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-3 bg-blue-100 rounded-xl">
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Open Events</p>
+                  <p className="text-2xl font-bold text-gray-900">{statusCounts.open || 0}</p>
+                  <p className="text-xs text-blue-600 font-medium mt-1">Ready to start</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-amber-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-3 bg-amber-100 rounded-xl">
+                  <Clock className="w-6 h-6 text-amber-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Started Events</p>
+                  <p className="text-2xl font-bold text-gray-900">{statusCounts.started || 0}</p>
+                  <p className="text-xs text-amber-600 font-medium mt-1">In progress</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-green-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-3 bg-green-100 rounded-xl">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Completed Events</p>
+                  <p className="text-2xl font-bold text-gray-900">{statusCounts.completed || 0}</p>
+                  <p className="text-xs text-green-600 font-medium mt-1">Successfully finished</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 border-red-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-3 bg-red-100 rounded-xl">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Exception Events</p>
+                  <p className="text-2xl font-bold text-gray-900">{statusCounts.exception || 0}</p>
+                  <p className="text-xs text-red-600 font-medium mt-1">Needs attention</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Event Details Card */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-3"></div>
+                Featured Event Details
+              </h3>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                {getStatusBadge('started')}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Event Name:</span>
+                <span className="text-sm text-gray-900 font-semibold">{eventDetails.eventName}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Event ID:</span>
+                <span className="text-sm text-gray-900 font-mono">{eventDetails.eventId}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Start Date:</span>
+                <span className="text-sm text-gray-900">{eventDetails.startDate}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">End Date:</span>
+                <span className="text-sm text-gray-900">{eventDetails.endDate}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Location:</span>
+                <span className="text-sm text-gray-900 text-right">{eventDetails.location}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Organizer:</span>
+                <span className="text-sm text-gray-900">{eventDetails.organizer}</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm font-medium text-gray-600">Participants:</span>
+                <span className="text-sm text-gray-900 flex items-center">
+                  <Users className="w-4 h-4 mr-1 text-gray-500" />
+                  {eventDetails.participants.toLocaleString()}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-600">Budget:</span>
+                <span className="text-sm text-gray-900 font-semibold">{eventDetails.budget}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bar Chart */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-3"></div>
+                Event Performance
+              </h3>
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={barData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="category" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #dc2626',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Bar dataKey="sales" fill="#dc2626" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Pie Chart - Event Status Distribution */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-3"></div>
+                Event Status Distribution
+              </h3>
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4">
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelStyle={{ fill: '#374151', fontSize: '12px', fontWeight: 'bold' }}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #dc2626',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsible Phase Tables */}
+        <div className="space-y-6">
+          <div className="flex items-center mb-4">
+            <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-3"></div>
+            <h2 className="text-xl font-bold text-gray-900">Event Phases</h2>
+          </div>
+          
+          {eventPhases.map((phase) => {
+            const colorClasses = getPhaseColorClasses(phase.color);
+            const IconComponent = phase.icon;
+            const isExpanded = expandedPhases[phase.id];
+            
+            return (
+              <div key={phase.id} className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                <div 
+                  className={`flex items-center justify-between p-6 cursor-pointer hover:${colorClasses.bg} transition-all duration-300 ${colorClasses.border} border-l-4`}
+                  onClick={() => togglePhase(phase.id)}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-3 ${colorClasses.icon} rounded-xl`}>
+                      <IconComponent className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-semibold ${colorClasses.text}`}>
+                        {phase.name}
+                      </h3>
+                      <p className="text-sm text-gray-600">{phase.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{phase.events.length} events in this phase</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">
+                      {isExpanded ? 'Hide' : 'Show'} events
+                    </span>
+                    <div className={`p-2 ${colorClasses.bg} rounded-lg hover:bg-opacity-80 transition-colors`}>
+                      {isExpanded ? (
+                        <ChevronUp className={`w-5 h-5 ${colorClasses.text}`} />
+                      ) : (
+                        <ChevronDown className={`w-5 h-5 ${colorClasses.text}`} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {isExpanded && (
+                  <div className={`border-t ${colorClasses.border}`}>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className={colorClasses.bg}>
+                          <tr>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Event Name
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Organizer
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Start Date
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              End Date
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Status
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Participants
+                            </th>
+                            <th className={`px-6 py-4 text-left text-xs font-bold ${colorClasses.text} uppercase tracking-wider`}>
+                              Budget
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {phase.events.map((event) => (
+                            <tr key={event.id} className={`hover:${colorClasses.bg}/50 transition-colors duration-200`}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {event.eventName}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {event.organizer}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {event.startDate}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {event.endDate}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {getStatusBadge(event.status)}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                <div className="flex items-center">
+                                  <Users className="w-4 h-4 mr-1 text-gray-400" />
+                                  {event.participants}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+                                {event.budget}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;
