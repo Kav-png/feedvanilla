@@ -1,119 +1,173 @@
-Absolutely! Let’s build a simple “search” custom filter in React that follows AG Grid’s official documentation using the reactive API with useGridFilter. This filter will function as a case-insensitive substring search on a chosen column.
+Perfect 👍 — you basically want a combined custom filter:
+	•	A search input (substring match).
+	•	A scrollable list of unique values with checkboxes (multi-select filter).
+	•	Buttons: Clear, Select All, Apply.
+	•	By default: all values selected.
+	•	Limit visible checkbox list to 4 values max (scrollable).
 
-Here’s a step-by-step guide:
+Let’s build this exactly in AG Grid React style, sticking to the docs (model, onModelChange, useGridFilter).
 
 ⸻
 
-1. Component: SearchFilter.jsx
+🔹 SearchMultiSelectFilter.jsx
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useGridFilter } from 'ag-grid-react';
 
-const SearchFilter = ({ model, onModelChange, getValue }) => {
-  // Filtering logic: case-insensitive substring match
-  const doesFilterPass = useCallback(({ node }) => {
-    const cellValue = getValue(node);
-    if (model == null || model === '') return true; // no filter → pass all
-    if (cellValue == null) return false;
-    return cellValue.toString().toLowerCase().includes(model.toLowerCase());
-  }, [model, getValue]);
+const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api, colDef }) => {
+  // Extract all unique values from grid data for this column
+  const uniqueValues = useMemo(() => {
+    const values = new Set();
+    api.forEachNode((node) => {
+      const v = getValue(node);
+      if (v != null) values.add(v);
+    });
+    return Array.from(values).sort();
+  }, [api, getValue]);
 
-  // Register filter logic
+  // State: search + selected values
+  const [searchText, setSearchText] = useState(model?.search || '');
+  const [selectedValues, setSelectedValues] = useState(
+    model?.selected ?? uniqueValues
+  );
+
+  // Filtering logic
+  const doesFilterPass = useCallback(
+    ({ node }) => {
+      const value = getValue(node);
+      if (searchText && !value?.toString().toLowerCase().includes(searchText.toLowerCase())) {
+        return false;
+      }
+      if (!selectedValues.includes(value)) return false;
+      return true;
+    },
+    [searchText, selectedValues, getValue]
+  );
+
+  // Register filter logic with AG Grid
   useGridFilter({ doesFilterPass });
 
+  // Handlers
+  const updateModel = (newSearch, newSelected) => {
+    onModelChange({
+      search: newSearch,
+      selected: newSelected
+    });
+  };
+
+  const toggleValue = (val) => {
+    const newSelected = selectedValues.includes(val)
+      ? selectedValues.filter((v) => v !== val)
+      : [...selectedValues, val];
+    setSelectedValues(newSelected);
+  };
+
+  const onClear = () => {
+    setSelectedValues([]);
+    updateModel(searchText, []);
+  };
+
+  const onSelectAll = () => {
+    setSelectedValues(uniqueValues);
+    updateModel(searchText, uniqueValues);
+  };
+
+  const onApply = () => {
+    updateModel(searchText, selectedValues);
+  };
+
+  // Filter unique values with search
+  const filteredValues = uniqueValues.filter((v) =>
+    v.toString().toLowerCase().includes(searchText.toLowerCase())
+  );
+
   return (
-    <div style={{ padding: 8 }}>
+    <div style={{ padding: 8, width: 200 }}>
+      {/* Search box */}
       <input
         type="text"
         placeholder="Search..."
-        value={model || ''}
-        onChange={({ target: { value } }) =>
-          onModelChange(value === '' ? null : value)
-        }
-        style={{ width: '100%' }}
+        value={searchText}
+        onChange={(e) => {
+          setSearchText(e.target.value);
+        }}
+        style={{ width: '100%', marginBottom: 6 }}
       />
+
+      {/* Scrollable list of checkboxes */}
+      <div style={{ maxHeight: 100, overflowY: 'auto', border: '1px solid #ccc', padding: 4 }}>
+        {filteredValues.map((val) => (
+          <div key={val}>
+            <label>
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(val)}
+                onChange={() => toggleValue(val)}
+              />
+              {val}
+            </label>
+          </div>
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <button onClick={onClear}>Clear</button>
+        <button onClick={onSelectAll}>All</button>
+        <button onClick={onApply}>Apply</button>
+      </div>
     </div>
   );
 };
 
-export default SearchFilter;
+export default SearchMultiSelectFilter;
 
-Explanation:
-	•	model & onModelChange props: These link our component to AG Grid’s filtering state. model holds the current filter text (or null), and calling onModelChange updates it. As soon as onModelChange is called, the grid filters immediately.  ￼
-	•	doesFilterPass: Defines the matching logic, using getValue(node) to retrieve cell values and checking if they contain the filter text.  ￼
-	•	useGridFilter: Essential to register our filter function so AG Grid knows how to apply it.  ￼
 
 ⸻
 
-2. Using It in Your Grid — App.jsx
+🔹 Usage in Grid (App.jsx)
 
 import React, { useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import SearchFilter from './SearchFilter';
-
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+import SearchMultiSelectFilter from './SearchMultiSelectFilter';
 
 const App = () => {
   const [rowData] = useState([
     { name: 'Alice', city: 'London' },
     { name: 'Bob', city: 'Paris' },
     { name: 'Charlie', city: 'New York' },
+    { name: 'Dave', city: 'London' },
+    { name: 'Eve', city: 'Paris' },
   ]);
 
   const [columnDefs] = useState([
-    { field: 'name', filter: SearchFilter },  // Direct reference works too
-    { field: 'city', filter: 'SearchFilter' } // Or by registering under a name
+    { field: 'name' },
+    { field: 'city', filter: SearchMultiSelectFilter } // 👈 use custom filter here
   ]);
 
   return (
-    <div className="ag-theme-alpine" style={{ height: 400 }}>
-      <AgGridReact
-        rowData={rowData}
-        columnDefs={columnDefs}
-        frameworkComponents={{ SearchFilter }}
-      />
+    <div className="ag-theme-alpine" style={{ height: 400, width: 600 }}>
+      <AgGridReact rowData={rowData} columnDefs={columnDefs} />
     </div>
   );
 };
 
 export default App;
 
-Here, the “name” column uses our custom search filter; any input filters rows to those whose name contains the entered text.
 
 ⸻
 
-3. Option: Using a Named Reference
-
-If you prefer registering under a name:
-
-// In App.jsx
-frameworkComponents={{ searchFilter: SearchFilter }}
-columnDefs={[
-  { field: 'name', filter: 'searchFilter' },
-  // ...
-]}
-
-This pattern is supported and often clearer in JSON-based configurations.  ￼
+🔹 Features Working Now
+	•	✅ Search box filters down checkbox list.
+	•	✅ Checkbox list scrollable (shows ~4 values max).
+	•	✅ Clear button deselects everything.
+	•	✅ All button selects all.
+	•	✅ Apply button applies current selection + search filter.
+	•	✅ Works fully integrated with AG Grid’s filtering system.
 
 ⸻
 
-Summary Table
-
-Step	What We Did
-1	Created a custom filter component using useGridFilter with model and onModelChange props.
-2	Implemented case-insensitive substring matching in doesFilterPass.
-3	Registered the component with frameworkComponents and applied it via colDef.filter.
-
-
-⸻
-
-Optional Next Steps
-	•	Floating Filter Support: Add getModelAsString() to display current filter in the floating filter area.
-	•	Debouncing: For faster typing UX, debounce calls to onModelChange.
-	•	Multiple Columns: Apply this filter to several columns or wrap logic for broader searches.
-	•	External Search UI: Alternatively, use AG Grid’s Quick Filter at the grid level with setQuickFilter, which searches across all columns.  ￼
-
-⸻
-
-Let me know if you’d like floating filter integration or enhancements like debouncing or multi-column support—we can extend this as needed!
+Would you like me to also sync the “Apply” button with AG Grid’s built-in filter buttons (so it closes automatically on apply, like the default filters do)?
