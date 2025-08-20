@@ -1,135 +1,119 @@
-You’re on the right track, and AG Grid’s official guide is a solid foundation. Here’s how to build a custom filter in React, based on the Component Filter pattern from AG Grid.
+Absolutely! Let’s build a simple “search” custom filter in React that follows AG Grid’s official documentation using the reactive API with useGridFilter. This filter will function as a case-insensitive substring search on a chosen column.
+
+Here’s a step-by-step guide:
 
 ⸻
 
-Core Concepts & Steps
+1. Component: SearchFilter.jsx
 
-1. Enable Filter Component
+import React, { useCallback } from 'react';
+import { useGridFilter } from 'ag-grid-react';
 
-AG Grid custom filters for React require enabling filter handlers, though this is optional for the modern approach:
-	•	If enableFilterHandlers is enabled at grid level, custom filters behave as external filters.
-	•	Without it, filter logic lives inside your component. Still supported but not recommended.
-￼
+const SearchFilter = ({ model, onModelChange, getValue }) => {
+  // Filtering logic: case-insensitive substring match
+  const doesFilterPass = useCallback(({ node }) => {
+    const cellValue = getValue(node);
+    if (model == null || model === '') return true; // no filter → pass all
+    if (cellValue == null) return false;
+    return cellValue.toString().toLowerCase().includes(model.toLowerCase());
+  }, [model, getValue]);
 
-⸻
-
-2. Two Required Pieces
-
-A custom filter needs:
-	1.	The Filter Component: UI and event handling.
-	2.	Filtering Logic: Inside the component, implement methods the grid calls: e.g. doesFilterPass, getModel, setModel, isFilterActive, and so on.
-￼ ￼
-
-⸻
-
-3. Registering the Filter
-
-Register your filter component with frameworkComponents prop on the <AgGridReact>:
-
-<AgGridReact
-  frameworkComponents={{ 'myFilter': MyCustomFilter }}
-  // other props...
-/>
-
-Then, reference it in your column definitions:
-
-{ field: 'price', filter: 'myFilter' }
-
-￼ ￼
-
-⸻
-
-4. Implementing the Filter Component
-
-Here’s a skeletal React filter component using a price range filter as an example:
-
-import React, { useState } from 'react';
-
-function MyCustomFilter(props) {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-
-  function isFilterActive() {
-    return from !== '' || to !== '';
-  }
-
-  function doesFilterPass(params) {
-    const value = params.data[props.colDef.field];
-    if (from && value < Number(from)) return false;
-    if (to && value > Number(to)) return false;
-    return true;
-  }
-
-  function getModel() {
-    return isFilterActive() ? { from, to } : null;
-  }
-
-  function setModel(model) {
-    if (model) {
-      setFrom(model.from);
-      setTo(model.to);
-    } else {
-      setFrom('');
-      setTo('');
-    }
-  }
-
-  function onApplyClick() {
-    props.filterChangedCallback();
-  }
+  // Register filter logic
+  useGridFilter({ doesFilterPass });
 
   return (
-    <div style={{ padding: '4px' }}>
+    <div style={{ padding: 8 }}>
       <input
-        type="number"
-        placeholder="From"
-        value={from}
-        onChange={(e) => setFrom(e.target.value)}
+        type="text"
+        placeholder="Search..."
+        value={model || ''}
+        onChange={({ target: { value } }) =>
+          onModelChange(value === '' ? null : value)
+        }
+        style={{ width: '100%' }}
       />
-      <input
-        type="number"
-        placeholder="To"
-        value={to}
-        onChange={(e) => setTo(e.target.value)}
-      />
-      <button onClick={onApplyClick}>Apply</button>
     </div>
   );
-}
+};
 
-export default MyCustomFilter;
+export default SearchFilter;
+
+Explanation:
+	•	model & onModelChange props: These link our component to AG Grid’s filtering state. model holds the current filter text (or null), and calling onModelChange updates it. As soon as onModelChange is called, the grid filters immediately.  ￼
+	•	doesFilterPass: Defines the matching logic, using getValue(node) to retrieve cell values and checking if they contain the filter text.  ￼
+	•	useGridFilter: Essential to register our filter function so AG Grid knows how to apply it.  ￼
+
+⸻
+
+2. Using It in Your Grid — App.jsx
+
+import React, { useState } from 'react';
+import { AgGridReact } from 'ag-grid-react';
+import SearchFilter from './SearchFilter';
+
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+const App = () => {
+  const [rowData] = useState([
+    { name: 'Alice', city: 'London' },
+    { name: 'Bob', city: 'Paris' },
+    { name: 'Charlie', city: 'New York' },
+  ]);
+
+  const [columnDefs] = useState([
+    { field: 'name', filter: SearchFilter },  // Direct reference works too
+    { field: 'city', filter: 'SearchFilter' } // Or by registering under a name
+  ]);
+
+  return (
+    <div className="ag-theme-alpine" style={{ height: 400 }}>
+      <AgGridReact
+        rowData={rowData}
+        columnDefs={columnDefs}
+        frameworkComponents={{ SearchFilter }}
+      />
+    </div>
+  );
+};
+
+export default App;
+
+Here, the “name” column uses our custom search filter; any input filters rows to those whose name contains the entered text.
+
+⸻
+
+3. Option: Using a Named Reference
+
+If you prefer registering under a name:
+
+// In App.jsx
+frameworkComponents={{ searchFilter: SearchFilter }}
+columnDefs={[
+  { field: 'name', filter: 'searchFilter' },
+  // ...
+]}
+
+This pattern is supported and often clearer in JSON-based configurations.  ￼
+
+⸻
+
+Summary Table
+
+Step	What We Did
+1	Created a custom filter component using useGridFilter with model and onModelChange props.
+2	Implemented case-insensitive substring matching in doesFilterPass.
+3	Registered the component with frameworkComponents and applied it via colDef.filter.
 
 
 ⸻
 
-5. Example from AG Grid Tutorial
-
-The AG Grid tutorial follows exactly this pattern using a RangeFilter.js component applied to a Price column. It includes:
-	•	Form UI with input fields and an Apply button.
-	•	The necessary filter interface methods (doesFilterPass, getModel, setModel, isFilterActive, etc.).
-	•	A complete worksheet and GitHub sample in the customization-demo-classes directory.
-￼
+Optional Next Steps
+	•	Floating Filter Support: Add getModelAsString() to display current filter in the floating filter area.
+	•	Debouncing: For faster typing UX, debounce calls to onModelChange.
+	•	Multiple Columns: Apply this filter to several columns or wrap logic for broader searches.
+	•	External Search UI: Alternatively, use AG Grid’s Quick Filter at the grid level with setQuickFilter, which searches across all columns.  ￼
 
 ⸻
 
-Recap Table
-
-Step	Action
-1	Define your filter component (UI + methods)
-2	Register it in frameworkComponents
-3	Assign to the column via colDef.filter
-4	Trigger filter logic with filterChangedCallback()
-5	Optionally add floating preview via getModelAsString()
-
-
-⸻
-
-Bonus: Floating Filter (Optional)
-
-If you’d like a floating filter UI (a mini version inline), you can implement a Floating Filter Component and pair it with your filter.
-There’s even a read-only fallback where implementing getModelAsString() suffices without creating a full floating filter.
-￼
-
-⸻
-
-Does this match what you’re trying to do? If you’d like help wiring this into your app, adding types (TypeScript), or handling async data, just let me know—I can help tailor it to your use case!
+Let me know if you’d like floating filter integration or enhancements like debouncing or multi-column support—we can extend this as needed!
