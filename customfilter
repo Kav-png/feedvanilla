@@ -1,21 +1,20 @@
-Perfect 👍 — you basically want a combined custom filter:
-	•	A search input (substring match).
-	•	A scrollable list of unique values with checkboxes (multi-select filter).
-	•	Buttons: Clear, Select All, Apply.
-	•	By default: all values selected.
-	•	Limit visible checkbox list to 4 values max (scrollable).
+Got it ✅ — you want your custom filter to:
+	1.	Match the AG Grid Alpine theme (same look & feel as built-in filters).
+	2.	Have two searches:
+	•	Top: direct search (filters rows immediately, like quick filter).
+	•	Bottom: set search (filters the checkbox list of unique values).
 
-Let’s build this exactly in AG Grid React style, sticking to the docs (model, onModelChange, useGridFilter).
+I’ll refactor the component to use Alpine theme styles (input spacing, buttons, scroll list) so it looks like a native AG Grid filter popup.
 
 ⸻
 
-🔹 SearchMultiSelectFilter.jsx
+🔹 SearchMultiSelectFilter.jsx (Alpine styled, double search)
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { useGridFilter } from 'ag-grid-react';
 
-const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api, colDef }) => {
-  // Extract all unique values from grid data for this column
+const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api }) => {
+  // Extract unique values for this column
   const uniqueValues = useMemo(() => {
     const values = new Set();
     api.forEachNode((node) => {
@@ -25,32 +24,34 @@ const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api, colDef }
     return Array.from(values).sort();
   }, [api, getValue]);
 
-  // State: search + selected values
-  const [searchText, setSearchText] = useState(model?.search || '');
+  // State: search (direct), setSearch (checkbox filter), selections
+  const [directSearch, setDirectSearch] = useState(model?.directSearch || '');
+  const [setSearch, setSetSearch] = useState('');
   const [selectedValues, setSelectedValues] = useState(
     model?.selected ?? uniqueValues
   );
 
-  // Filtering logic
+  // Filter logic
   const doesFilterPass = useCallback(
     ({ node }) => {
       const value = getValue(node);
-      if (searchText && !value?.toString().toLowerCase().includes(searchText.toLowerCase())) {
+      // direct search applies immediately
+      if (directSearch && !value?.toString().toLowerCase().includes(directSearch.toLowerCase())) {
         return false;
       }
+      // must also be in selected values
       if (!selectedValues.includes(value)) return false;
       return true;
     },
-    [searchText, selectedValues, getValue]
+    [directSearch, selectedValues, getValue]
   );
 
-  // Register filter logic with AG Grid
   useGridFilter({ doesFilterPass });
 
-  // Handlers
-  const updateModel = (newSearch, newSelected) => {
+  // Update AG Grid model
+  const updateModel = (newDirect, newSelected) => {
     onModelChange({
-      search: newSearch,
+      directSearch: newDirect,
       selected: newSelected
     });
   };
@@ -64,57 +65,96 @@ const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api, colDef }
 
   const onClear = () => {
     setSelectedValues([]);
-    updateModel(searchText, []);
+    updateModel(directSearch, []);
   };
 
   const onSelectAll = () => {
     setSelectedValues(uniqueValues);
-    updateModel(searchText, uniqueValues);
+    updateModel(directSearch, uniqueValues);
   };
 
   const onApply = () => {
-    updateModel(searchText, selectedValues);
+    updateModel(directSearch, selectedValues);
   };
 
-  // Filter unique values with search
+  // Filtered values for checkbox list
   const filteredValues = uniqueValues.filter((v) =>
-    v.toString().toLowerCase().includes(searchText.toLowerCase())
+    v.toString().toLowerCase().includes(setSearch.toLowerCase())
   );
 
   return (
-    <div style={{ padding: 8, width: 200 }}>
-      {/* Search box */}
-      <input
-        type="text"
-        placeholder="Search..."
-        value={searchText}
-        onChange={(e) => {
-          setSearchText(e.target.value);
-        }}
-        style={{ width: '100%', marginBottom: 6 }}
-      />
+    <div className="ag-filter-body-wrapper" style={{ padding: '4px', width: 220 }}>
+      {/* Direct search (applies instantly) */}
+      <div className="ag-filter-field-input ag-input-wrapper" style={{ marginBottom: 6 }}>
+        <input
+          className="ag-input-field-input ag-text-field-input"
+          type="text"
+          placeholder="Search values..."
+          value={directSearch}
+          onChange={(e) => {
+            setDirectSearch(e.target.value);
+            updateModel(e.target.value, selectedValues); // apply instantly
+          }}
+          style={{ width: '100%' }}
+        />
+      </div>
 
-      {/* Scrollable list of checkboxes */}
-      <div style={{ maxHeight: 100, overflowY: 'auto', border: '1px solid #ccc', padding: 4 }}>
+      {/* Set search (filters list only) */}
+      <div className="ag-filter-field-input ag-input-wrapper" style={{ marginBottom: 6 }}>
+        <input
+          className="ag-input-field-input ag-text-field-input"
+          type="text"
+          placeholder="Search in list..."
+          value={setSearch}
+          onChange={(e) => setSetSearch(e.target.value)}
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      {/* Scrollable checkbox list */}
+      <div
+        style={{
+          maxHeight: 100,
+          overflowY: 'auto',
+          border: '1px solid var(--ag-border-color)',
+          borderRadius: 4,
+          padding: 4,
+          marginBottom: 8
+        }}
+      >
         {filteredValues.map((val) => (
-          <div key={val}>
-            <label>
-              <input
-                type="checkbox"
-                checked={selectedValues.includes(val)}
-                onChange={() => toggleValue(val)}
-              />
-              {val}
-            </label>
-          </div>
+          <label
+            key={val}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: 2,
+              fontSize: '0.85em'
+            }}
+          >
+            <input
+              type="checkbox"
+              className="ag-checkbox-input"
+              checked={selectedValues.includes(val)}
+              onChange={() => toggleValue(val)}
+              style={{ marginRight: 6 }}
+            />
+            {val}
+          </label>
         ))}
       </div>
 
       {/* Action buttons */}
-      <div style={{ marginTop: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        <button onClick={onClear}>Clear</button>
-        <button onClick={onSelectAll}>All</button>
-        <button onClick={onApply}>Apply</button>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <button className="ag-standard-button ag-filter-apply-panel-button" onClick={onClear}>
+          Clear
+        </button>
+        <button className="ag-standard-button ag-filter-apply-panel-button" onClick={onSelectAll}>
+          All
+        </button>
+        <button className="ag-standard-button ag-filter-apply-panel-button" onClick={onApply}>
+          Apply
+        </button>
       </div>
     </div>
   );
@@ -125,49 +165,24 @@ export default SearchMultiSelectFilter;
 
 ⸻
 
-🔹 Usage in Grid (App.jsx)
+🔹 Usage (same as before)
 
-import React, { useState } from 'react';
-import { AgGridReact } from 'ag-grid-react';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
-
-import SearchMultiSelectFilter from './SearchMultiSelectFilter';
-
-const App = () => {
-  const [rowData] = useState([
-    { name: 'Alice', city: 'London' },
-    { name: 'Bob', city: 'Paris' },
-    { name: 'Charlie', city: 'New York' },
-    { name: 'Dave', city: 'London' },
-    { name: 'Eve', city: 'Paris' },
-  ]);
-
-  const [columnDefs] = useState([
-    { field: 'name' },
-    { field: 'city', filter: SearchMultiSelectFilter } // 👈 use custom filter here
-  ]);
-
-  return (
-    <div className="ag-theme-alpine" style={{ height: 400, width: 600 }}>
-      <AgGridReact rowData={rowData} columnDefs={columnDefs} />
-    </div>
-  );
-};
-
-export default App;
+const [columnDefs] = useState([
+  { field: 'name' },
+  { field: 'city', filter: SearchMultiSelectFilter } // custom filter
+]);
 
 
 ⸻
 
-🔹 Features Working Now
-	•	✅ Search box filters down checkbox list.
-	•	✅ Checkbox list scrollable (shows ~4 values max).
-	•	✅ Clear button deselects everything.
-	•	✅ All button selects all.
-	•	✅ Apply button applies current selection + search filter.
-	•	✅ Works fully integrated with AG Grid’s filtering system.
+🔹 Features
+	•	🎨 Styled with Alpine theme classes (ag-input-field-input, ag-standard-button, etc.).
+	•	🔎 Two searches:
+	•	Direct search (top): applies filter instantly to grid rows.
+	•	Set search (bottom): narrows down checkbox list only.
+	•	📜 Checkbox list is scrollable (max height ~4 items).
+	•	✅ Buttons: Clear, All, Apply with Alpine button look.
 
 ⸻
 
-Would you like me to also sync the “Apply” button with AG Grid’s built-in filter buttons (so it closes automatically on apply, like the default filters do)?
+Would you like me to also make the Apply button close the filter popup (same behavior as built-in filters), or should it just apply the filter and keep the popup open?
