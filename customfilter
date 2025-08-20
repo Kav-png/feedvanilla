@@ -1,0 +1,135 @@
+You’re on the right track, and AG Grid’s official guide is a solid foundation. Here’s how to build a custom filter in React, based on the Component Filter pattern from AG Grid.
+
+⸻
+
+Core Concepts & Steps
+
+1. Enable Filter Component
+
+AG Grid custom filters for React require enabling filter handlers, though this is optional for the modern approach:
+	•	If enableFilterHandlers is enabled at grid level, custom filters behave as external filters.
+	•	Without it, filter logic lives inside your component. Still supported but not recommended.
+￼
+
+⸻
+
+2. Two Required Pieces
+
+A custom filter needs:
+	1.	The Filter Component: UI and event handling.
+	2.	Filtering Logic: Inside the component, implement methods the grid calls: e.g. doesFilterPass, getModel, setModel, isFilterActive, and so on.
+￼ ￼
+
+⸻
+
+3. Registering the Filter
+
+Register your filter component with frameworkComponents prop on the <AgGridReact>:
+
+<AgGridReact
+  frameworkComponents={{ 'myFilter': MyCustomFilter }}
+  // other props...
+/>
+
+Then, reference it in your column definitions:
+
+{ field: 'price', filter: 'myFilter' }
+
+￼ ￼
+
+⸻
+
+4. Implementing the Filter Component
+
+Here’s a skeletal React filter component using a price range filter as an example:
+
+import React, { useState } from 'react';
+
+function MyCustomFilter(props) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  function isFilterActive() {
+    return from !== '' || to !== '';
+  }
+
+  function doesFilterPass(params) {
+    const value = params.data[props.colDef.field];
+    if (from && value < Number(from)) return false;
+    if (to && value > Number(to)) return false;
+    return true;
+  }
+
+  function getModel() {
+    return isFilterActive() ? { from, to } : null;
+  }
+
+  function setModel(model) {
+    if (model) {
+      setFrom(model.from);
+      setTo(model.to);
+    } else {
+      setFrom('');
+      setTo('');
+    }
+  }
+
+  function onApplyClick() {
+    props.filterChangedCallback();
+  }
+
+  return (
+    <div style={{ padding: '4px' }}>
+      <input
+        type="number"
+        placeholder="From"
+        value={from}
+        onChange={(e) => setFrom(e.target.value)}
+      />
+      <input
+        type="number"
+        placeholder="To"
+        value={to}
+        onChange={(e) => setTo(e.target.value)}
+      />
+      <button onClick={onApplyClick}>Apply</button>
+    </div>
+  );
+}
+
+export default MyCustomFilter;
+
+
+⸻
+
+5. Example from AG Grid Tutorial
+
+The AG Grid tutorial follows exactly this pattern using a RangeFilter.js component applied to a Price column. It includes:
+	•	Form UI with input fields and an Apply button.
+	•	The necessary filter interface methods (doesFilterPass, getModel, setModel, isFilterActive, etc.).
+	•	A complete worksheet and GitHub sample in the customization-demo-classes directory.
+￼
+
+⸻
+
+Recap Table
+
+Step	Action
+1	Define your filter component (UI + methods)
+2	Register it in frameworkComponents
+3	Assign to the column via colDef.filter
+4	Trigger filter logic with filterChangedCallback()
+5	Optionally add floating preview via getModelAsString()
+
+
+⸻
+
+Bonus: Floating Filter (Optional)
+
+If you’d like a floating filter UI (a mini version inline), you can implement a Floating Filter Component and pair it with your filter.
+There’s even a read-only fallback where implementing getModelAsString() suffices without creating a full floating filter.
+￼
+
+⸻
+
+Does this match what you’re trying to do? If you’d like help wiring this into your app, adding types (TypeScript), or handling async data, just let me know—I can help tailor it to your use case!
