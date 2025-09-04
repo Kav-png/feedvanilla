@@ -1,15 +1,81 @@
-useEffect(() => {
-  if (gridRef.current?.api) {
-    const model = {};
-    Object.entries(filterDictionary).forEach(([field, values]) => {
-      if (values && values.length > 0) {
-        model[field] = {
-          directSearch: "",   // optional search string
-          selected: values,   // your allowed values
-        };
-      }
-    });
+import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import { AgGridReact } from "ag-grid-react";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
+import SearchMultiSelectFilter from "./SearchMultiSelectFilter";
 
-    gridRef.current.api.setFilterModel(model);
-  }
-}, [filterDictionary]);
+function buildFilterModel(filterDictionary) {
+  const model = {};
+  Object.entries(filterDictionary || {}).forEach(([field, values]) => {
+    if (values && values.length > 0) {
+      model[field] = {
+        directSearch: "",
+        selected: values,
+      };
+    }
+  });
+  return model;
+}
+
+const MyGrid = forwardRef(({ rowData, filterDictionary }, ref) => {
+  const gridRef = useRef(null);
+
+  const [columnDefs] = useState([
+    { field: "status", filter: SearchMultiSelectFilter },
+    { field: "priority", filter: SearchMultiSelectFilter },
+    { field: "assignedTo", filter: SearchMultiSelectFilter },
+    { field: "createdDate" },
+  ]);
+
+  // Apply dictionary whenever it changes
+  useEffect(() => {
+    if (gridRef.current?.api) {
+      gridRef.current.api.setFilterModel(buildFilterModel(filterDictionary));
+    }
+  }, [filterDictionary]);
+
+  // Also apply filters when grid is first ready (handles collapsible re-mounts)
+  const onGridReady = (params) => {
+    params.api.setFilterModel(buildFilterModel(filterDictionary));
+  };
+
+  // Backup actions for parent
+  useImperativeHandle(ref, () => ({
+    applyFilters: (dict) => {
+      if (gridRef.current?.api) {
+        gridRef.current.api.setFilterModel(buildFilterModel(dict));
+      }
+    },
+    clearFilters: () => {
+      gridRef.current?.api?.setFilterModel(null);
+    },
+    selectAllFilters: () => {
+      if (!gridRef.current?.api) return;
+      const model = {};
+      gridRef.current.api.getColumnDefs().forEach((col) => {
+        if (col.field && col.filter === SearchMultiSelectFilter) {
+          const values = [];
+          gridRef.current.api.forEachNode((node) => {
+            const v = node.data[col.field];
+            if (v != null && !values.includes(v)) values.push(v);
+          });
+          model[col.field] = { directSearch: "", selected: values };
+        }
+      });
+      gridRef.current.api.setFilterModel(model);
+    },
+  }));
+
+  return (
+    <div className="ag-theme-alpine" style={{ height: 500, width: "100%" }}>
+      <AgGridReact
+        ref={gridRef}
+        rowData={rowData}
+        columnDefs={columnDefs}
+        onGridReady={onGridReady}   {/* ✅ ensures filters apply when grid mounts */}
+      />
+    </div>
+  );
+});
+
+export default MyGrid;
