@@ -1,36 +1,40 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
+import SearchMultiSelectFilter from "./SearchMultiSelectFilter";
 
 const MyGrid = ({ rowData, filterDictionary }) => {
   const gridRef = useRef(null);
 
-  const columnDefs = [
-    { field: "status" },
-    { field: "priority" },
-    { field: "assignedTo" },
+  const [columnDefs] = useState([
+    { field: "status", filter: SearchMultiSelectFilter },
+    { field: "priority", filter: SearchMultiSelectFilter },
+    { field: "assignedTo", filter: SearchMultiSelectFilter },
     { field: "createdDate" }
-  ];
+  ]);
 
   // Build AG Grid filter model from dictionary
   const buildFilterModel = (filters) => {
     const filterModel = {};
     Object.keys(filters).forEach((field) => {
-      filterModel[field] = {
-        filterType: "set",
-        values: filters[field], // array of allowed values
-      };
+      if (filters[field] && filters[field].length > 0) {
+        filterModel[field] = {
+          filterType: "custom", // mark as custom filter
+          directSearch: "",      // you can wire this up if needed
+          selected: filters[field]
+        };
+      }
     });
     return filterModel;
   };
 
   // Re-apply filters whenever filterDictionary changes
   useEffect(() => {
-    if (gridRef.current && gridRef.current.api) {
+    if (gridRef.current?.api) {
       const filterModel = buildFilterModel(filterDictionary);
       gridRef.current.api.setFilterModel(filterModel);
-      gridRef.current.api.onFilterChanged(); // force refresh
+      gridRef.current.api.onFilterChanged();
     }
   }, [filterDictionary]);
 
