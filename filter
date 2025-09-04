@@ -1,8 +1,218 @@
+Got it ✅ — let’s pull everything together:
+	•	Parent grid component → owns filterDictionary and applies it to the grid.
+	•	Custom filter (SearchMultiSelectFilter) → UI for searching + selecting values.
+	•	Helper (applyCustomFilters) → bridges the dictionary and the custom filters.
+
+Below is the full working code with dictionary integration:
+
+⸻
+
+🔹 SearchMultiSelectFilter.jsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useGridFilter } from "ag-grid-react";
+
+const SearchMultiSelectFilter = ({ model, onModelChange, getValue, api }) => {
+  // Extract unique values for this column
+  const uniqueValues = useMemo(() => {
+    const values = new Set();
+    api.forEachNode((node) => {
+      const v = getValue(node);
+      if (v != null) values.add(v);
+    });
+    return Array.from(values).sort();
+  }, [api, getValue]);
+
+  // State: direct search, list search, selections
+  const [directSearch, setDirectSearch] = useState(model?.directSearch || "");
+  const [setSearch, setSetSearch] = useState("");
+  const [selectedValues, setSelectedValues] = useState(
+    model?.selected ?? uniqueValues
+  );
+
+  // Keep UI in sync if model changes externally (via parent dictionary)
+  useEffect(() => {
+    if (model) {
+      setDirectSearch(model.directSearch || "");
+      setSelectedValues(model.selected ?? uniqueValues);
+    }
+  }, [model, uniqueValues]);
+
+  // Filter logic
+  const doesFilterPass = useCallback(
+    ({ node }) => {
+      const value = getValue(node);
+
+      // Direct search filter
+      if (
+        directSearch &&
+        !value?.toString().toLowerCase().includes(directSearch.toLowerCase())
+      ) {
+        return false;
+      }
+
+      // Must be in selected list
+      if (!selectedValues.includes(value)) return false;
+
+      return true;
+    },
+    [directSearch, selectedValues, getValue]
+  );
+
+  useGridFilter({ doesFilterPass });
+
+  // Update model
+  const updateModel = (newDirect, newSelected) => {
+    onModelChange({
+      directSearch: newDirect,
+      selected: newSelected,
+    });
+  };
+
+  const toggleValue = (val) => {
+    const newSelected = selectedValues.includes(val)
+      ? selectedValues.filter((v) => v !== val)
+      : [...selectedValues, val];
+    setSelectedValues(newSelected);
+  };
+
+  const onClear = () => {
+    setSelectedValues([]);
+    updateModel(directSearch, []);
+  };
+
+  const onSelectAll = () => {
+    setSelectedValues(uniqueValues);
+    updateModel(directSearch, uniqueValues);
+  };
+
+  const onApply = () => {
+    updateModel(directSearch, selectedValues);
+    if (api) api.hidePopupMenu(); // close popup like built-in filters
+  };
+
+  const filteredValues = uniqueValues.filter((v) =>
+    v.toString().toLowerCase().includes(setSearch.toLowerCase())
+  );
+
+  return (
+    <div className="ag-filter-body-wrapper" style={{ padding: "4px", width: 220 }}>
+      {/* Direct search */}
+      <div className="ag-filter-field-input ag-input-wrapper" style={{ marginBottom: 6 }}>
+        <input
+          className="ag-input-field-input ag-text-field-input"
+          type="text"
+          placeholder="Search values..."
+          value={directSearch}
+          onChange={(e) => {
+            setDirectSearch(e.target.value);
+            updateModel(e.target.value, selectedValues); // apply instantly
+          }}
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      {/* Search within list */}
+      <div className="ag-filter-field-input ag-input-wrapper" style={{ marginBottom: 6 }}>
+        <input
+          className="ag-input-field-input ag-text-field-input"
+          type="text"
+          placeholder="Search in list..."
+          value={setSearch}
+          onChange={(e) => setSetSearch(e.target.value)}
+          style={{ width: "100%" }}
+        />
+      </div>
+
+      {/* Checkbox list */}
+      <div
+        style={{
+          maxHeight: 100,
+          overflowY: "auto",
+          border: "1px solid var(--ag-border-color)",
+          borderRadius: 4,
+          padding: 4,
+          marginBottom: 8,
+        }}
+      >
+        {filteredValues.map((val) => (
+          <label
+            key={val}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: 2,
+              fontSize: "0.85em",
+            }}
+          >
+            <input
+              type="checkbox"
+              className="ag-checkbox-input"
+              checked={selectedValues.includes(val)}
+              onChange={() => toggleValue(val)}
+              style={{ marginRight: 6 }}
+            />
+            {val}
+          </label>
+        ))}
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        <button
+          className="ag-standard-button ag-filter-apply-panel-button"
+          onClick={onClear}
+        >
+          Clear
+        </button>
+        <button
+          className="ag-standard-button ag-filter-apply-panel-button"
+          onClick={onSelectAll}
+        >
+          All
+        </button>
+        <button
+          className="ag-standard-button ag-filter-apply-panel-button"
+          onClick={onApply}
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default SearchMultiSelectFilter;
+
+
+⸻
+
+🔹 MyGrid.jsx
+
 import React, { useRef, useEffect, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import SearchMultiSelectFilter from "./SearchMultiSelectFilter";
+
+// Helper to apply dictionary
+function applyCustomFilters(api, filterDictionary) {
+  if (!api) return;
+
+  Object.entries(filterDictionary).forEach(([field, values]) => {
+    const filterInstance = api.getFilterInstance(field);
+    if (!filterInstance) return;
+
+    const model =
+      values && values.length > 0
+        ? { directSearch: "", selected: values }
+        : null;
+
+    filterInstance.setModel(model);
+  });
+
+  api.onFilterChanged();
+}
 
 const MyGrid = ({ rowData, filterDictionary }) => {
   const gridRef = useRef(null);
@@ -11,30 +221,13 @@ const MyGrid = ({ rowData, filterDictionary }) => {
     { field: "status", filter: SearchMultiSelectFilter },
     { field: "priority", filter: SearchMultiSelectFilter },
     { field: "assignedTo", filter: SearchMultiSelectFilter },
-    { field: "createdDate" }
+    { field: "createdDate" },
   ]);
 
-  // Build AG Grid filter model from dictionary
-  const buildFilterModel = (filters) => {
-    const filterModel = {};
-    Object.keys(filters).forEach((field) => {
-      if (filters[field] && filters[field].length > 0) {
-        filterModel[field] = {
-          filterType: "custom", // mark as custom filter
-          directSearch: "",      // you can wire this up if needed
-          selected: filters[field]
-        };
-      }
-    });
-    return filterModel;
-  };
-
-  // Re-apply filters whenever filterDictionary changes
+  // Apply dictionary on mount + whenever it changes
   useEffect(() => {
     if (gridRef.current?.api) {
-      const filterModel = buildFilterModel(filterDictionary);
-      gridRef.current.api.setFilterModel(filterModel);
-      gridRef.current.api.onFilterChanged();
+      applyCustomFilters(gridRef.current.api, filterDictionary);
     }
   }, [filterDictionary]);
 
@@ -50,3 +243,33 @@ const MyGrid = ({ rowData, filterDictionary }) => {
 };
 
 export default MyGrid;
+
+
+⸻
+
+🔹 Example Usage
+
+const rowData = [
+  { status: "Open", priority: "High", assignedTo: "John", createdDate: "2025-01-01" },
+  { status: "Closed", priority: "Medium", assignedTo: "Alice", createdDate: "2025-02-02" },
+  { status: "Open", priority: "Low", assignedTo: "Bob", createdDate: "2025-03-03" },
+];
+
+const filterDictionary = {
+  status: ["Open"],
+  priority: ["High", "Medium"],
+};
+
+<MyGrid rowData={rowData} filterDictionary={filterDictionary} />;
+
+
+⸻
+
+✅ This gives you:
+	•	Your custom multi-select filter UI.
+	•	A parent controller that applies filterDictionary at startup and on updates.
+	•	Proper sync between dictionary → grid filters → UI checkboxes.
+
+⸻
+
+Do you also want the reverse sync (if the user changes a filter in the grid UI, it updates the parent filterDictionary automatically), or should it stay one-way (dictionary → grid only)?
