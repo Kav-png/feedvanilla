@@ -1,0 +1,48 @@
+import React, { useRef, useEffect } from "react";
+import { AgGridReact } from "ag-grid-react";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
+
+const MyGrid = ({ rowData, filterDictionary }) => {
+  const gridRef = useRef(null);
+
+  const columnDefs = [
+    { field: "status" },
+    { field: "priority" },
+    { field: "assignedTo" },
+    { field: "createdDate" }
+  ];
+
+  // Build AG Grid filter model from dictionary
+  const buildFilterModel = (filters) => {
+    const filterModel = {};
+    Object.keys(filters).forEach((field) => {
+      filterModel[field] = {
+        filterType: "set",
+        values: filters[field], // array of allowed values
+      };
+    });
+    return filterModel;
+  };
+
+  // Re-apply filters whenever filterDictionary changes
+  useEffect(() => {
+    if (gridRef.current && gridRef.current.api) {
+      const filterModel = buildFilterModel(filterDictionary);
+      gridRef.current.api.setFilterModel(filterModel);
+      gridRef.current.api.onFilterChanged(); // force refresh
+    }
+  }, [filterDictionary]);
+
+  return (
+    <div className="ag-theme-alpine" style={{ height: 500, width: "100%" }}>
+      <AgGridReact
+        ref={gridRef}
+        rowData={rowData}
+        columnDefs={columnDefs}
+      />
+    </div>
+  );
+};
+
+export default MyGrid;
